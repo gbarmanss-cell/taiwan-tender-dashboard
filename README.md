@@ -14,17 +14,30 @@
 3. 日期規則
    - 不提供日期區間
    - 固定使用 `Asia/Taipei` 當日公告日期
-   - 每次更新覆寫 `docs/data/tenders.json`
+   - GitHub Actions 每小時更新一次
 
 > 政府採購正式分類通常使用「財物」，因此介面採用「財物案」，不是「財務案」。
 
+## 資料來源
+
+目前使用 OpenFun 標案 API：
+
+```text
+https://pcc-api.openfun.app/api/listbydate?date=YYYYMMDD
+```
+
+此 API 是第三方社群服務，資料源自政府電子採購網，不是政府官方 API。程式只在排程時按日期取得一次資料，再由本站本地 JSON 提供搜尋，不會讓每位訪客直接重複呼叫 API。
+
+若 API 暫時失敗，GitHub Actions 會失敗並保留上一版 `docs/data/tenders.json`，避免把正常資料覆寫成空資料。
+
 ## 架構
 
-- `crawler.py`：尊重 robots.txt、限制頻率的公開頁面擷取器
+- `crawler.py`：按臺北日期取得 OpenFun API 資料
+- `app/openfun_source.py`：API 連線、重試、欄位正規化及類型判斷
 - `data/tenders.db`：SQLite，執行後自動建立
 - `export_json.py`：只匯出臺北時間當日公告
 - `docs/`：不需要後端的搜尋與篩選頁面
-- `.github/workflows/update-tenders.yml`：自動更新
+- `.github/workflows/update-tenders.yml`：每小時自動更新
 
 ## 本機執行
 
@@ -46,19 +59,23 @@ python -m http.server 8000 --directory docs
 ## 指定日期測試
 
 ```bash
+python crawler.py --date 2026-06-22
 python export_json.py --date 2026-06-22
 ```
 
-## 重要限制
+## 分類方式
 
-政府電子採購網可能使用動態表單、驗證碼或調整 HTML。本版本刻意不繞過任何限制：
+API 若直接提供「勞務、財物、工程」字樣，程式會直接採用。若清單資料沒有正式分類欄位，則以標案名稱中的明確關鍵詞輔助分類，例如：
 
-- 先讀取 robots.txt
-- 請求間隔至少 2 秒
-- robots.txt 無法確認時預設停止
-- 不處理登入、驗證碼或封鎖規避
+- 系統建置、系統維護、委外服務 → 勞務
+- 設備採購、器材採購、硬體採購 → 財物
+- 新建工程、修繕工程、改善工程 → 工程
 
-若官方另有開放資料或 API，正式版應優先改接官方資料介面。
+未能可靠分類的公告不會被硬塞進錯誤類型。
+
+## 診斷
+
+每次 Actions 執行都會產生 `tender-fetch-diagnostics` artifact，包含 API 狀態、回傳筆數與分類成功筆數，保存 7 天。
 
 ## 免費資料庫選擇
 
