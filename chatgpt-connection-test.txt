@@ -1,0 +1,2 @@
+GitHub write connection works.
+Created by ChatGPT as a permissions test.
