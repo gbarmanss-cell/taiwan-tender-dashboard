@@ -24,10 +24,20 @@ jobs:
       - name: Crawl public tender data
         env:
           REQUEST_DELAY_SECONDS: "2"
-          USER_AGENT: "TaiwanTenderDashboard/0.1 (+${{ github.server_url }}/${{ github.repository }})"
-        run: python crawler.py
+          USER_AGENT: "TaiwanTenderDashboard/0.2 (+${{ github.server_url }}/${{ github.repository }})"
+        run: python crawler.py --diagnostics-dir diagnostics
 
-      - run: python export_json.py
+      - name: Export today's data
+        run: python export_json.py
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tender-fetch-diagnostics
+          path: diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Commit refreshed JSON
         run: |
