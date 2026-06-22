@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>今日政府標案搜尋</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="wrap">
+<header><p class="eyebrow">TODAY'S PUBLIC PROCUREMENT</p><h1>今日政府標案搜尋</h1><p class="lead">固定搜尋臺北時間當日最新公告，不提供歷史日期區間。</p></header>
+<section class="search-panel" aria-label="標案搜尋條件">
+<div class="field"><label for="type">標案類型</label><select id="type"><option value="">全部類型</option><option value="勞務">勞務案</option><option value="財物">財物案</option><option value="工程">工程案</option></select></div>
+<div class="field keyword-field"><label for="q">關鍵字</label><div class="keyword-row"><input id="q" type="search" placeholder="例如：系統建置、系統維護" autocomplete="off"><button id="searchButton" type="button">搜尋今日標案</button></div></div>
+</section>
+<section class="summary"><div><strong id="count">讀取中…</strong><span id="dateLabel"></span></div><span id="updated"></span></section>
+<section id="list" class="grid" aria-live="polite"></section>
+</main><script src="app.js"></script></body></html>
