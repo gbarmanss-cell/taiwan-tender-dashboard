@@ -48,12 +48,34 @@ def _text_values(value: object) -> list[str]:
 
 def normalize_category(record: dict) -> str:
     text = " ".join(_text_values(record))
+    title = str((record.get("brief") or {}).get("title") or record.get("title") or "")
+
     if "勞務" in text:
         return "勞務"
     if "財物" in text or "財務" in text:
         return "財物"
     if "工程" in text:
         return "工程"
+
+    service_terms = (
+        "系統建置", "系統維護", "維護服務", "委託服務", "委外服務",
+        "顧問服務", "資訊服務", "規劃設計", "研究計畫", "教育訓練",
+    )
+    goods_terms = (
+        "設備採購", "器材採購", "物品採購", "硬體採購", "軟體採購",
+        "車輛採購", "藥品採購", "耗材採購", "財物採購",
+    )
+    works_terms = (
+        "新建工程", "修繕工程", "整建工程", "改善工程", "裝修工程",
+        "水電工程", "道路工程", "營繕工程", "工程採購",
+    )
+
+    if any(term in title for term in works_terms):
+        return "工程"
+    if any(term in title for term in service_terms):
+        return "勞務"
+    if any(term in title for term in goods_terms):
+        return "財物"
     return ""
 
 
@@ -103,16 +125,6 @@ def fetch_by_date(
     response.raise_for_status()
     payload = response.json()
 
-    (directory / "openfun-response-meta.json").write_text(
-        json.dumps({
-            "request_url": response.url,
-            "status_code": response.status_code,
-            "content_type": response.headers.get("content-type"),
-            "record_count": len(payload.get("records", [])),
-        }, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
     records = payload.get("records")
     if not isinstance(records, list):
         raise RuntimeError("OpenFun API response does not contain a records list")
@@ -120,4 +132,16 @@ def fetch_by_date(
     notice_date = datetime.strptime(yyyymmdd, "%Y%m%d").date().isoformat()
     rows = [normalize_record(record, notice_date) for record in records if isinstance(record, dict)]
     rows = [row for row in rows if row["title"]]
+
+    (directory / "openfun-response-meta.json").write_text(
+        json.dumps({
+            "request_url": response.url,
+            "status_code": response.status_code,
+            "content_type": response.headers.get("content-type"),
+            "record_count": len(records),
+            "normalized_count": len(rows),
+            "classified_count": sum(1 for row in rows if row["category"]),
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     return rows
