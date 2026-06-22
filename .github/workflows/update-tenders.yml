@@ -3,7 +3,7 @@ name: Update tender data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "20 23 * * *"
+    - cron: "17 * * * *"
 
 permissions:
   contents: write
@@ -21,10 +21,9 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Crawl public tender data
+      - name: Fetch today's tenders from OpenFun API
         env:
-          REQUEST_DELAY_SECONDS: "2"
-          USER_AGENT: "TaiwanTenderDashboard/0.2 (+${{ github.server_url }}/${{ github.repository }})"
+          USER_AGENT: "TaiwanTenderDashboard/1.0 (+${{ github.server_url }}/${{ github.repository }})"
         run: python crawler.py --diagnostics-dir diagnostics
 
       - name: Export today's data
