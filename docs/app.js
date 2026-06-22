@@ -76,6 +76,7 @@ function normalizeRecord(record, noticeDate) {
     agency: String(record?.unit_name ?? record?.agency ?? "").trim(),
     notice_date: noticeDate,
     category: normalizeCategory(record),
+    announcement_type: String(brief.type ?? "").trim(),
     job_number: jobNumber,
     source_url: `${VIEWER_BASE}/tender.html?unit_id=${encodeURIComponent(unitId)}&job_number=${encodeURIComponent(jobNumber)}`,
   };
@@ -85,7 +86,7 @@ function render() {
   const keyword = keywordInput.value.trim().toLowerCase();
   const selectedType = typeSelect.value;
   const rows = state.items.filter(item => {
-    const haystack = `${item.title} ${item.agency} ${item.category} ${item.job_number}`.toLowerCase();
+    const haystack = `${item.title} ${item.agency} ${item.category} ${item.announcement_type} ${item.job_number}`.toLowerCase();
     return (!keyword || haystack.includes(keyword)) && (!selectedType || item.category === selectedType);
   });
 
@@ -100,7 +101,7 @@ function render() {
 
   list.innerHTML = rows.map(item => `
     <article class="card">
-      <div class="type-badge">${safe(item.category)}案</div>
+      <div class="type-badge">${safe(item.category ? `${item.category}案` : (item.announcement_type || "未分類"))}</div>
       <h2><a href="${safe(item.source_url)}" target="_blank" rel="noopener noreferrer">${safe(item.title)}</a></h2>
       <div class="meta"><span>${safe(item.agency || "未標示機關")}</span><span>公告：${safe(item.notice_date || "—")}</span><span>標案編號：${safe(item.job_number || "—")}</span></div>
     </article>`).join("");
@@ -132,7 +133,7 @@ async function loadLocalFallback() {
   const response = await fetch("data/tenders.json", { cache: "no-store" });
   if (!response.ok) throw new Error(`local JSON HTTP ${response.status}`);
   const data = await response.json();
-  state.items = (data.items ?? []).filter(item => ["勞務","財物","工程"].includes(item.category));
+  state.items = (data.items ?? []).filter(item => item.title);
   state.searchDate = data.search_date ?? taipeiToday();
   state.source = "網站內建備援資料";
   updated.textContent = `資料來源：${state.source}`;
@@ -158,11 +159,12 @@ async function loadToday() {
 
     state.items = payload.records
       .map(record => normalizeRecord(record, today))
-      .filter(item => item.title && ["勞務","財物","工程"].includes(item.category));
+      .filter(item => item.title);
     state.source = "OpenFun API 即時資料";
     saveCache(today, state.items);
     updated.textContent = `載入：${new Date().toLocaleString("zh-TW")}`;
-    setStatus("success", "今日資料已載入", `已取得 ${state.items.length} 筆可分類標案。`, false);
+    const classified = state.items.filter(item => item.category).length;
+    setStatus("success", "今日資料已載入", `共取得 ${state.items.length} 筆公告，其中 ${classified} 筆可判定為勞務、財物或工程。`, false);
   } catch (error) {
     console.warn("OpenFun API failed", error);
     const cached = loadCache(today);
