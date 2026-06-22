@@ -1,15 +1,22 @@
-name: Update tender data
+name: Validate dashboard
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "17 * * * *"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "app/**"
+      - "crawler.py"
+      - "export_json.py"
+      - "requirements.txt"
+      - ".github/workflows/update-tenders.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  update:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,27 +28,15 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Fetch today's tenders from OpenFun API
-        env:
-          USER_AGENT: "TaiwanTenderDashboard/1.0 (+${{ github.server_url }}/${{ github.repository }})"
-        run: python crawler.py --diagnostics-dir diagnostics
+      - name: Compile Python files
+        run: python -m compileall app crawler.py export_json.py
 
-      - name: Export today's data
-        run: python export_json.py
+      - name: Validate local JSON
+        run: python -m json.tool docs/data/tenders.json > /dev/null
 
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tender-fetch-diagnostics
-          path: diagnostics/
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Commit refreshed JSON
+      - name: Check required dashboard files
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data/tenders.json
-          git diff --cached --quiet || git commit -m "chore: refresh tender data"
-          git push
+          test -f docs/index.html
+          test -f docs/app.js
+          test -f docs/style.css
+          echo "Dashboard validation passed."
